@@ -17,22 +17,71 @@ pe = os.path.exists
 pj = os.path.join
 HOME = os.path.expanduser("~")
 
+#import sys
+#sys.path.insert(0, pj(HOME, "Repos/mattphillipsphd/ml_utils/general"))
+#from utils import retain_session_dir
+
+g_delete_me_txt = "delete_me.txt"
+g_session_dir_stub = "session_%02d"
+
+
+### TODO TODO TODO TODO
+
+# WARNING if you call this funtion, you had better also call retain_session_dir
+# as well at the suitable time or else the session that was created  will get    # deleted on the next session run.
+def create_session_dir(output_supdir, dir_stub=g_session_dir_stub):
+    stub = pj(output_supdir, dir_stub)
+    ct = 0
+    while pe(stub % (ct)):
+        if pe(pj(stub % (ct), g_delete_me_txt)):
+            shutil.rmtree(stub % (ct))
+            break
+        ct += 1
+    os.makedirs(stub % (ct))
+    pathlib.Path( pj(stub % (ct), g_delete_me_txt) ).touch()
+    return stub % (ct)
+
+def retain_session_dir(session_dir):
+    if pe(pj(session_dir, g_delete_me_txt)):
+        os.remove( pj(session_dir, g_delete_me_txt) )
+
+### TODO TODO TODO TODO
+
+g_delete_me_txt = "delete_me.txt"
+g_session_log = "session.log"
+
+
+def default_batch_writer(trainer, epoch, batch_idx, batch_len, losses):
+    loss = losses[0].item()
+    s = "\t\tTrain Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}\n"\
+            .format(epoch,
+                batch_idx * batch_len,
+                len(trainer.get_train_loader().dataset),
+                100. * batch_idx / len(trainer.get_train_loader()),
+                loss / batch_len)
+    with open(pj(trainer.get_session_dir(), g_session_log), "a") as fp:
+        fp.write(s)
+        fp.flush
 
 # This sampler is appropriate for image autoencoder models
 def ae_sampler(epoch, trainer):
-    trainer._model.eval()
-    img_size = trainer._model.get_input_size()
+    model = trainer.get_model()
+    img_size = model.get_input_size()
     sample_batch_size = 32 # TODO
+    dataset = trainer.get_train_loader().dataset
+    inc = len(dataset) // sample_batch_size
     inputs = []
     targets = []
     for i in range(sample_batch_size):
-        inp,target = trainer._train_loader.dataset.__getitem__(i) # TODO test
+        inp,target = trainer.get_train_loader().dataset[i*inc]
+            # TODO use test_loader
         inputs.append(inp)
         targets.append(target)
     inputs = torch.stack(inputs)
     targets = torch.stack(targets)
 
-    outputs = trainer._model( Variable(inputs).cuda() )[0]
+    model.eval()
+    outputs = model( Variable(inputs).cuda() )[0]
     output_imgs = [o.data.cpu() for o in torch.squeeze(outputs)]
     output_imgs = torch.stack(output_imgs).view(sample_batch_size, 1, img_size,
             img_size)
@@ -43,24 +92,17 @@ def ae_sampler(epoch, trainer):
             % (epoch)))
 
 
-def get_session_dir(output_supdir):
-    stub = pj(output_supdir, "session_%02d")
-    ct = 0
-    while pe(stub % (ct)):
-        if pe(pj(stub % (ct), "delete_me.txt")):
-            shutil.rmtree(stub % (ct))
-            break
-        ct += 1
-    os.makedirs(stub % (ct))
-    pathlib.Path( pj(stub % (ct), "delete_me.txt") ).touch()
-    return stub % (ct)
+####### TODO TODO TODO  
+# Get rid of weird input function arguments, SUBCLASS THIS
+####### TODO TODO TODO  
 
-
-class Trainer():
+class TrainerBase():
     def __init__(self, model, loaders, opt_getter, criterion, session_dir,
-            num_epochs=100, base_lr=0.001, num_lr_drops=2, lr_drop_factor=5, 
-            log_interval=10, epoch_writer=None):
+            num_epochs=1000, base_lr=0.001, num_lr_drops=2, lr_drop_factor=5, 
+            log_interval=10, epoch_writer=None, 
+            batch_writer=default_batch_writer):
         self._base_lr = base_lr
+        self._batch_writer = batch_writer
         self._criterion = criterion
         self._lr_drop_factor = lr_drop_factor
         self._epoch_writer = epoch_writer
@@ -81,7 +123,15 @@ class Trainer():
         self._test_loss = None
         self._train_loader = loaders[0]
         self._train_loss = None
-        
+
+    def get_model(self):
+        return self._model
+
+    def get_session_dir(self):
+        return self._session_dir
+
+    def get_train_loader(self):
+        return self._train_loader
 
     def train(self):
         self._init_session()
@@ -93,26 +143,19 @@ class Trainer():
                 y = Variable(targets).cuda()
                 self._optimizer.zero_grad()
                 yhat = self._model(x)
-                loss = self._criterion(yhat, y)
+                losses = self._criterion(yhat, y)
+                loss = losses[0]
                 loss.backward()
                 self._train_loss += loss.item()
                 self._optimizer.step()
                 # TODO add in train_step, test_step interface
 
                 if batch_idx % self._log_interval == 0: # TODO add in test loss
-                    s = "\t\tTrain Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}\n"\
-                            .format(epoch,
-                                batch_idx * len(x),
-                                len(self._train_loader.dataset),
-                                100. * batch_idx / len(self._train_loader),
-                                loss.item() / len(x))
-                    with open(pj(self._session_dir, "session.log"), "a") as fp:
-                        fp.write(s)
-                        fp.flush
+                    self._write_batch(self, epoch, batch_idx, len(x), losses)
 
             avg_loss = self._train_loss / len(self._train_loader.dataset)
             s = "====> Epoch: {} Average loss: {:.4f}".format(epoch, avg_loss)
-            with open(pj(self._session_dir, "session.log"), "a") as fp:
+            with open(pj(self._session_dir, g_session_log), "a") as fp:
                 fp.write(s + "\n")
                 fp.flush()
             print(s)
@@ -129,7 +172,7 @@ class Trainer():
                 self._last_avg_loss = avg_loss
                 self._save_model()
 
-            self._retain_session()
+            retain_session_dir(self._session_dir)
 
     def _init_session(self):
         if self._is_initialized:
@@ -151,13 +194,19 @@ class Trainer():
     def _get_optimizer(self):
         return self._opt_getter(self._lr)
 
-    def _retain_session(self):
-        if pe(pj(self._session_dir, "delete_me.txt")):
-            os.remove( pj(self._session_dir, "delete_me.txt") )
-
     def _save_model(self):
         path = pj(self._model_dir, "model.pkl")
         torch.save(self._model.state_dict(), path)
+
+    def _write_batch(self, *args):
+#        print(*args)
+#        raise
+        if self._batch_writer is None:
+            return
+        if not callable(self._batch_writer):
+            raise RuntimeError("Parameter epoch_writer must be either None or "\
+                    "a callable function")
+        self._batch_writer(*args)
 
     def _write_epoch(self, epoch):
         if self._epoch_writer is None:

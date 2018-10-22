@@ -18,8 +18,8 @@ g_session_dir_stub = "session_%02d"
 
 
 # WARNING if you call this funtion, you had better also call retain_session_dir
-# as well at the suitable time or else it will get deleted on the next session
-# run.
+# as well at the suitable time or else the session that was created  will get 
+# deleted on the next session run.
 def create_session_dir(output_supdir, dir_stub=g_session_dir_stub):
     stub = pj(output_supdir, dir_stub)
     ct = 0

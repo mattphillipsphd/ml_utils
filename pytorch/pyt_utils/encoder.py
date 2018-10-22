@@ -13,6 +13,9 @@ pj = os.path.join
 HOME = os.path.expanduser("~")
 
 
+# Inputs:
+#   model: Subclass of nn.Module, must have a method get_features which returns
+#   features (same as output for non-autoencoder models).
 def compute_features(model, data_loader, gpu_device=0, make_chip_list=True):
     logging.debug("compute_features")
     logging.info("Generating features ...")
@@ -48,7 +51,6 @@ def compute_labels(model, data_loader, gpu_device=0, make_chip_list=True):
     logging.info("Generating labels ...")
     labels = []
     chip_list = []
-    raise
     if torch.cuda.is_available():
         model = model.cuda(gpu_device)
     if make_chip_list:
