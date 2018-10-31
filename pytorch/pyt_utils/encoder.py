@@ -86,8 +86,8 @@ def concatenate(enc_dir1, enc_dir2, output_dir):
         et1 = _get_enc_transform(enc_dir1)
         et2 = _get_enc_transform(enc_dir2)
         if et1 != et2:
-            raise RuntimeError("Inconsistent encoding transforms, %s and %s" % \
-                    (et1, et2))
+            raise RuntimeError("Inconsistent encoding transforms, %s and %s" \
+                    % (et1, et2))
 
     def _check_paths(enc_dir):
         paths = [pj(enc_dir, "model_path.txt"), pj(enc_dir, 
