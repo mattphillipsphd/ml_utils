@@ -9,11 +9,11 @@ with open("general/__init__.py") as fp:
             version = line[ line.index("\"")+1 : N-line[::-1].index("\"")-1 ]
             break
 
-PROJECT_DIRS = ["general", ]
+PROJECT_DIRS = ["general", "pytorch2caffe"]
 
 if __name__ == '__main__':
     setup(setup_fpath=__file__,
-        name="general_ml_utils",
+        name="ml_utils",
         author="Matt Phillips, Kitware",
         author_email="matt.phillips@kitware.com",
         version=version,

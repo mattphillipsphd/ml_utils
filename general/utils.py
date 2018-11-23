@@ -15,6 +15,7 @@ HOME = os.path.expanduser("~")
 
 g_delete_me_txt = "delete_me.txt"
 g_session_dir_stub = "session_%02d"
+g_session_log = "session.log"
 
 
 # WARNING if you call this funtion, you had better also call retain_session_dir
