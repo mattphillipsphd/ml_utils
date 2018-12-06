@@ -17,7 +17,6 @@ from torch.autograd import Variable
 from torchvision.utils import save_image
 
 # local imports
-from general.utils import create_session_dir, retain_session_dir
 
 pe = os.path.exists
 pj = os.path.join
@@ -128,6 +127,9 @@ class TrainerBase():
                     test_batch_idx += 1
 
             self._write_epoch(epoch, test_batch_idx)
+            avg_loss = self._test_acc_loss / test_batch_idx
+            if self._last_avg_loss is None:
+                self._last_avg_loss = avg_loss
             if avg_loss > self._last_avg_loss:
                 if self._lr_drop_ct == self._num_lr_drops:
                     break
@@ -138,8 +140,6 @@ class TrainerBase():
             else:
                 self._last_avg_loss = avg_loss
                 self._save_model()
-
-            retain_session_dir(self._session_dir)
 
 
     @abc.abstractmethod
@@ -152,7 +152,6 @@ class TrainerBase():
                     "already initialized")
         self._lr = self._base_lr
         self._lr_drop_ct = 0
-        self._last_avg_loss = np.Inf
         self._optimizer = self._get_optimizer()
         self._test_acc_loss = 0
         self._test_loader_iter = iter(self._test_loader)
