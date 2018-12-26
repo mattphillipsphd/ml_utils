@@ -53,7 +53,8 @@ def class_sampler(epoch, trainer):
 
 class TrainerBase():
     def __init__(self, model, loaders, session_dir, num_epochs=1000,
-            base_lr=0.001, num_lr_drops=2, lr_drop_factor=5, log_interval=10):
+            base_lr=0.001, num_lr_drops=2, lr_drop_factor=5, log_interval=10,
+            use_cuda=True):
         self._base_lr = base_lr
         self._lr_drop_factor = lr_drop_factor
         self._is_initialized = False
@@ -74,7 +75,9 @@ class TrainerBase():
         self._test_loss = None
         self._train_acc_loss = None
         self._train_loader = loaders[0]
+        self._train_loader_iter = None
         self._test_loss = None
+        self._use_cuda = use_cuda
 
         if type(self._test_loader) is not torch.utils.data.DataLoader:
             raise RuntimeError("A test dataloader must be supplied")
@@ -99,8 +102,12 @@ class TrainerBase():
             test_batch_idx = 0
             for batch_idx, (inputs, targets) in enumerate(self._train_loader):
                 self._model.train()
-                x = Variable(inputs).cuda() # TODO, iterate over tuple
-                y = Variable(targets).cuda()
+                if self._use_cuda:
+                    x = Variable(inputs).cuda() # TODO, iterate over tuple
+                    y = Variable(targets).cuda()
+                else:
+                    x = Variable(inputs) # TODO, iterate over tuple
+                    y = Variable(targets)
                 self._optimizer.zero_grad()
                 yhat = self._model(x)
                 losses = self._criterion(yhat, y)
@@ -115,8 +122,12 @@ class TrainerBase():
                     self._model.eval()
                     test_inputs,test_targets \
                             = self._get_test_data(test_batch_idx)
-                    test_x = Variable(test_inputs).cuda()
-                    test_y = Variable(test_targets).cuda()
+                    if self._use_cuda:
+                        test_x = Variable(test_inputs).cuda()
+                        test_y = Variable(test_targets).cuda()
+                    else:
+                        test_x = Variable(test_inputs)
+                        test_y = Variable(test_targets)
                     self._optimizer.zero_grad()
                     test_yhat = self._model(test_x)
                     test_losses = self._criterion(test_yhat, test_y)
@@ -125,6 +136,8 @@ class TrainerBase():
                     self._test_acc_loss += test_loss.item()
                     self._write_batch(epoch, batch_idx, test_batch_idx)
                     test_batch_idx += 1
+
+                self._post_batch_hook()
 
             self._write_epoch(epoch, test_batch_idx)
             avg_loss = self._test_acc_loss / test_batch_idx
@@ -141,6 +154,29 @@ class TrainerBase():
                 self._last_avg_loss = avg_loss
                 self._save_model()
 
+    # This function is primarily for testing purposes
+    def train_one(self):
+        if not self._is_initialized:
+            self._init_session()
+            self._train_loader_iter = iter(self._train_loader)
+        batch_idx = 0
+        self._model.train()
+        inputs,targets = next(self._train_loader_iter)
+        if self._use_cuda:
+            x = Variable(inputs).cuda() # TODO, iterate over tuple
+            y = Variable(targets).cuda()
+        else:
+            x = Variable(inputs)
+            y = Variable(targets)
+        self._optimizer.zero_grad()
+        yhat = self._model(x)
+        losses = self._criterion(yhat, y)
+        loss = losses[0]
+        self._train_loss = loss.item()
+        self._train_acc_loss += loss.item()
+        loss.backward()
+        self._optimizer.step()
+        return x,y,yhat,loss
 
     @abc.abstractmethod
     def _criterion(self, yhat, y):
@@ -175,6 +211,10 @@ class TrainerBase():
             self._test_loader_iter = iter(self._test_loader)
         data,labels = next(self._test_loader_iter)
         return data,labels
+
+    # Intended to be overridden in derived class
+    def _post_batch_hook(self):
+        pass
 
     def _save_model(self):
         path = pj(self._model_dir, "%s.pkl" % (self._model.get_name()))
