@@ -207,9 +207,11 @@ class TrainerBase():
 
     def _get_test_data(self, test_batch_idx):
         batch_len = self._test_loader.batch_size
-        if test_batch_idx * batch_len > len(self._test_loader.dataset):
+        try:
+            data,labels = next(self._test_loader_iter)
+        except StopIteration:
             self._test_loader_iter = iter(self._test_loader)
-        data,labels = next(self._test_loader_iter)
+            data,labels = next(self._test_loader_iter)
         return data,labels
 
     # Intended to be overridden in derived class
