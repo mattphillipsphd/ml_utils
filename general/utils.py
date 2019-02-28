@@ -4,6 +4,9 @@ Platform independent utilities
 
 import csv
 import fnmatch
+import itertools
+import matplotlib
+import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pathlib
@@ -11,6 +14,7 @@ import shutil
 import sys
 
 from collections import OrderedDict
+
 
 pe = os.path.exists
 pj = os.path.join
@@ -96,6 +100,70 @@ def include_patterns(*patterns):
         return set(all_names) - set(keep) - set(dir_names)
 
     return _ignore_patterns
+
+# Inputs
+#   sessions_supdir: Directory containing all sessions directories, e.g.
+#       ~/Training/lap
+#   model_name: Name of model
+#   dataset_name: Name of dataset
+#   resume_path: Path to session to be resumed, if applicable
+# Output
+#   Returns path to either a newly-created session directory or one to be
+#       resumed, per inputs
+def make_or_get_session_dir(sessions_supdir, model_name, dataset_name,
+        resume_path=""):
+    supdir = pj(sessions_supdir, model_name, dataset_name)
+    if not pe(supdir):
+        os.makedirs(supdir)
+    if len(resume_path)==0:
+        session_dir = create_session_dir(supdir)
+    else:
+        session_dir = os.path.dirname( os.path.dirname(resume_path) )
+        if not os.path.basename(session_dir).startswith("session_"):
+            raise RuntimeError("Invalid resume path given, %s" % (resume_path))
+    return session_dir
+
+# Cribbed pretty directly from https://scikit-learn.org/stable/auto_examples/
+# model_selection/plot_confusion_matrix.html#sphx-glr-auto-examples-model-
+# selection-plot-confusion-matrix-py
+def plot_confusion_matrix(cm, save_path, classes,
+                          normalize=False,
+                          title='Confusion matrix',
+                          cmap=plt.cm.Blues,
+                          write_to_console=False):
+    """
+    This function prints and plots the confusion matrix.
+    Normalization can be applied by setting `normalize=True`.
+    """
+    if normalize:
+        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+
+    if write_to_console:
+        if normalize:
+            print("Normalized confusion matrix")
+        else:
+            print('Confusion matrix, without normalization')
+        print(cm)
+
+    plt.imshow(cm, interpolation='nearest', cmap=cmap)
+    plt.title(title)
+    plt.colorbar()
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes, rotation=45)
+    plt.yticks(tick_marks, classes)
+
+    fmt = '.2f' if normalize else 'd'
+    thresh = cm.max() / 2.
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, format(cm[i, j], fmt),
+                 horizontalalignment="center",
+                 color="white" if cm[i, j] > thresh else "black")
+
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+    plt.tight_layout()
+    plt.savefig(save_path)
+    plt.close()
 
 # This deletes the 'delete_me.txt' file which would otherwise signify that
 # this directory should be overwritten on the next training run.  Paired with
