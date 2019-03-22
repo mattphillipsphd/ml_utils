@@ -14,6 +14,7 @@ import shutil
 import sys
 
 from collections import OrderedDict
+from PIL import Image
 
 
 pe = os.path.exists
@@ -70,6 +71,42 @@ def get_project_dir(project_name, file_path):
                     % (project_name, file_path))
         old_fp = file_path
     return os.path.abspath(file_path)
+
+# Inputs
+#   x: A PIL image
+# Output
+#   Returns the minimal square expansion of the image, preserving the center
+#   of the original
+def grow_image_to_square(x, fill_color=(0,0,0)):
+    wd,ht = x.size
+    new_sz = np.max([wd, ht])
+    if x.mode=="L":
+        orig = np.array( x.getdata() ).reshape(ht,wd)
+        if wd<ht:
+            x0 = (new_sz - wd) // 2
+            y0 = 0
+        else:
+            x0 = 0
+            y0 = (new_sz - ht) // 2
+        x1 = x0 + wd
+        y1 = y0 + ht
+        img = np.zeros((new_sz, new_sz))
+        img[y0:y1, x0:x1] = orig
+        if wd<ht:
+            m0 = np.expand_dims(img[:, x0], 1)
+            img[:, :x0] = m0
+            m1 = np.expand_dims(img[:, x1-1], 1)
+            img[:, x1:] = m1
+        else:
+            m0 = np.expand_dims(img[y0, :], 0)
+            img[:y0, :] = m0
+            m1 = np.expand_dims(img[y1-1, :], 0)
+            img[y1:, :] = m1
+        img = Image.fromarray(img).convert("L")
+    else:
+        img = Image.new("RGB", (new_sz,new_sz), fill_color)
+        img.paste( x, ((new_sz - wd) // 2, (new_sz - ht) // 2) )
+    return img
 
 # Copied directly from https://stackoverflow.com/questions/35155382/copying      # -specific-files-to-a-new-folder-while-maintaining-the-original-subdirect
 def include_patterns(*patterns):
@@ -165,6 +202,36 @@ def plot_confusion_matrix(cm, save_path, classes,
     plt.savefig(save_path)
     plt.close()
 
+# Reads a session.log file and copies the configuration (as written by 
+# write_parameters) into a dict
+# Inputs:
+#   session_log: path to session.log file
+# Output:
+#   OrderedDict of configuration parameters
+def read_session_config(session_log):
+    cfg = OrderedDict()
+    with open(session_log) as fp:
+        line = next(fp)
+        ct = 0
+        while line.strip() != "Configuration:":
+            line = next(fp)
+            ct += 1
+            if ct > 1000:
+                raise RuntimeError("Configuration not found")
+            continue
+        line = next(fp).strip()
+        while len(line) > 1:
+            pos = line.index(":")
+            key = line[:pos]
+            val = line[pos+1:].strip()
+            if val[0] == "'":
+                val = val[1:]
+            if val[-1] == "'":
+                val = val[:-1]
+            cfg[key] = val
+            line = next(fp)
+    return cfg
+
 # This deletes the 'delete_me.txt' file which would otherwise signify that
 # this directory should be overwritten on the next training run.  Paired with
 # create_session_dir
@@ -190,6 +257,7 @@ def write_arguments(session_dir):
 #       "session_dir" with a valid path.
 def write_parameters(cfg):
     with open(pj(cfg["session_dir"], g_session_log), "a") as fp:
+        fp.write("Configuration:\n")
         for k,v in cfg.items():
             fp.write("%s: %s\n" % (k, repr(v)))
 
@@ -203,9 +271,9 @@ def write_training_results(results_dict, cfg, project_dir, trainer_name):
     if not pe(project_dir):
         raise RuntimeError("project_dir %s should already exist"%(project_dir))
     results_keys = results_dict.keys()
-    if any([s not in results_keys for s in ["loss", "accuracy"]]):
+    if any([s not in results_keys for s in ["loss"]]):
         raise RuntimeError("Argument results_dict must have standard keys: " \
-                "loss, accuracy")
+                "loss")
     path = pj(project_dir, "%s_results.csv" % (trainer_name))
     data = []
     prev_dict = OrderedDict()
