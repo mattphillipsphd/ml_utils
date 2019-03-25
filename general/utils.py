@@ -282,7 +282,8 @@ def write_training_results(results_dict, cfg, project_dir, trainer_name):
             reader = csv.reader(fp)
             header = next(reader)
             for row in reader:
-                data.append(row)
+                if len(row)>0:
+                    data.append(row)
         for i,h in enumerate(header):
             prev_dict[h] = []
             for row in data:
@@ -294,11 +295,11 @@ def write_training_results(results_dict, cfg, project_dir, trainer_name):
     new_dict = OrderedDict()
 
     for pk in prev_keys:
+        if pk in cfg_keys:
+            break
         new_dict[pk] = prev_dict[pk]
         if pk in results_keys:
             new_dict[pk].append( results_dict[pk] )
-        elif pk in cfg_keys:
-            break
         else:
             new_dict[pk] = prev_dict[pk]
             new_dict[pk].append("")
