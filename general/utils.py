@@ -47,6 +47,47 @@ def copy_code(project_dir, session_dir):
     shutil.copytree(path_to_ml_utils, mludir,
         ignore=include_patterns("*.py", "*.txt"))
 
+# For running inference, copies the configuration saved to session.log using 
+# write_session_config during training.  To be run from program that does 
+# inference
+# Inputs:
+#   cfg: configuration file from inference program.  All and only parameters
+#       to be updated should have value None
+#   framework: [tensorflow, pytorch] what modeling framework is being used
+# Output:
+#   Same configuration file, now with new values added.
+def copy_config(cfg, framework="pytorch"):
+    logfile = pj( cfg["source_session_dir"], "session.log" )
+    source_cfg = read_session_config(logfile)
+    if framework=="pytorch":
+        suffixes = [".pth", ".pt", ".pkl"]
+    else:
+        raise NotImplementedError()
+    cfg["model_path"] = get_recent_model( pj(source_cfg["session_dir"],
+        "models"), model_suffixes=suffixes )
+    for k,v in cfg.items():
+        if v is None:
+            if k not in source_cfg:
+                print("Warning, key %s is missing.  This is okay if running " \
+                        "inference on an older dataset" % k)
+                cfg[k] = None
+            else:
+                try:
+                    v = int( source_cfg[k] )
+                except ValueError:
+                    try:
+                        v = float( source_cfg[k] )
+                    except ValueError:
+                        v = source_cfg[k]
+                cfg[k] = v
+    if len( cfg["output_dir"] ) == 0:
+        cfg["output_dir"] = pj(source_cfg["session_dir"], "eval")
+    if not pe(cfg["output_dir"]):
+        os.makedirs( cfg["output_dir"] )
+    print("Configuration:")
+    devnull = [print("\t%s: %s" % (k,v)) for k,v in cfg.items()]
+    return cfg
+    
 # WARNING if you call this funtion, you had better also call retain_session_dir
 # as well at the suitable time or else the session that was created  will get 
 # deleted on the next session run.
@@ -73,7 +114,85 @@ def get_project_dir(project_name, file_path):
     return os.path.abspath(file_path)
 
 # Inputs
+#   models_dir: Directory containing pytorch models saved in the format used by
+#       save_model_pop_old
+# Output
+#   Full path to most recent model
+def get_recent_model(models_dir, model_suffixes=[".pkl", ".pt", ".pth"]):
+    models = []
+    for f in os.listdir(models_dir):
+        for ms in model_suffixes:
+            if f.endswith(ms):
+                models.append(f)
+                break
+    best_num = -1
+    best_path = ""
+    for m in models:
+        m_ = os.path.splitext(m)[0]
+        if int(m_[-4:]) > best_num:
+            best_num = int(m_[-4:])
+            best_path = pj(models_dir, m)
+    return best_path
+
+# Inputs
 #   x: A PIL image
+#   expansion: If this is an int, the pixel size of the new image.  If it is a
+#       float, the proportion increase (e.g, 1.25).
+#   fill_color: If the image is RGB, this color will be used in the expansion
+# Output
+#   Returns a larger image with the original image centered in the original
+def expand_square_image(x, expansion, fill_color=(0,0,0)):
+    wd,ht = x.size
+    max_dim = max(wd, ht)
+    if expansion==max_dim or expansion==1.0:
+        return x
+    if type(expansion)==int:
+        if expansion<max_dim:
+            raise RuntimeError("The new dimension %d must be larger than the " \
+                    "max input image dimension, %d" % (expansion, max_dim))
+        new_sz = expansion
+    elif type(expansion)==float:
+        if expansion<1.0:
+            raise RuntimeError("Expansion factor must be >= 1.0, got %f" \
+                    % expansion)
+        new_sz = int( np.round( expansion * max_dim ) )
+    else:
+        raise RuntimeError("Unrecognized type for expansion, %s" \
+                % type(expansion))
+    if x.mode=="L":
+        # TODO np.array is very slow here, doesn't seem to be any way to do this
+        # without it though.
+        orig = np.array( x.getdata() ).reshape(ht,wd)
+        x0 = (new_sz - wd) // 2
+        y0 = (new_sz - ht) // 2
+        x1 = x0 + wd
+        y1 = y0 + ht
+        img = np.zeros((new_sz, new_sz))
+        img[y0:y1, x0:x1] = orig
+
+        c0 = np.expand_dims(img[:, x0], 1)
+        img[:, :x0] = c0
+        c1 = np.expand_dims(img[:, x1-1], 1)
+        img[:, x1:] = c1
+        r0 = np.expand_dims(img[y0, :], 0)
+        img[:y0, :] = r0
+        r1 = np.expand_dims(img[y1-1, :], 0)
+        img[y1:, :] = r1
+
+        img = Image.fromarray(img).convert("L")
+
+    elif x.mode=="RGB":
+        img = Image.new("RGB", (new_sz,new_sz), fill_color)
+        img.paste( x, ((new_sz - wd) // 2, (new_sz - ht) // 2) )
+
+    else:
+        raise RuntimeError("Unexpected PIL image mode, %s" % x.mode)
+    return img
+
+
+# Inputs
+#   x: A PIL image
+#   fill_color: If the image is RGB, this color will be used in the expansion
 # Output
 #   Returns the minimal square expansion of the image, preserving the center
 #   of the original
@@ -81,6 +200,8 @@ def grow_image_to_square(x, fill_color=(0,0,0)):
     wd,ht = x.size
     new_sz = np.max([wd, ht])
     if x.mode=="L":
+        # TODO np.array is very slow here, doesn't seem to be any way to do this
+        # without it though.
         orig = np.array( x.getdata() ).reshape(ht,wd)
         if wd<ht:
             x0 = (new_sz - wd) // 2
@@ -103,9 +224,11 @@ def grow_image_to_square(x, fill_color=(0,0,0)):
             m1 = np.expand_dims(img[y1-1, :], 0)
             img[y1:, :] = m1
         img = Image.fromarray(img).convert("L")
-    else:
+    elif x.mode=="RGB":
         img = Image.new("RGB", (new_sz,new_sz), fill_color)
         img.paste( x, ((new_sz - wd) // 2, (new_sz - ht) // 2) )
+    else:
+        raise RuntimeError("Unexpected PIL image mode, %s" % x.mode)
     return img
 
 # Copied directly from https://stackoverflow.com/questions/35155382/copying      # -specific-files-to-a-new-folder-while-maintaining-the-original-subdirect
@@ -147,7 +270,7 @@ def include_patterns(*patterns):
 # Output
 #   Returns path to either a newly-created session directory or one to be
 #       resumed, per inputs
-def make_or_get_session_dir(sessions_supdir, model_name, dataset_name,
+def make_or_get_session_dir(sessions_supdir, model_name="", dataset_name="",
         resume_path=""):
     supdir = pj(sessions_supdir, model_name, dataset_name)
     if not pe(supdir):
@@ -260,6 +383,7 @@ def write_parameters(cfg):
         fp.write("Configuration:\n")
         for k,v in cfg.items():
             fp.write("%s: %s\n" % (k, repr(v)))
+    fp.write("\n")
 
 # Inputs:
 #   results_dict: A dictionary of core training metrics, see code for required

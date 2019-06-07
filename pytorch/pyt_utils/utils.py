@@ -18,23 +18,6 @@ HOME = os.path.expanduser("~")
 
 
 # Inputs
-#   models_dir: Directory containing pytorch models saved in the format used by
-#       save_model_pop_old
-# Output
-#   Full path to most recent model
-def get_recent_model(models_dir):
-    models = [f for f in os.listdir(models_dir) if f.endswith(".pkl") \
-            or f.endswith(".pt") or f.endswith(".pth")]
-    best_num = -1
-    best_path = ""
-    for m in models:
-        m_ = os.path.splitext(m)[0]
-        if int(m_[-4:]) > best_num:
-            best_num = int(m_[-4:])
-            best_path = pj(models_dir, m)
-    return best_path
-
-# Inputs
 #   resnet: Name of ResNet version
 #   num_classes: Number of classes in final fc output layer
 # Output
