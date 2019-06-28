@@ -63,8 +63,11 @@ def copy_config(cfg, framework="pytorch"):
         suffixes = [".pth", ".pt", ".pkl"]
     else:
         raise NotImplementedError()
-    cfg["model_path"] = get_recent_model( pj(source_cfg["session_dir"],
-        "models"), model_suffixes=suffixes )
+    models_dir = pj(source_cfg["session_dir"], "models")
+    cfg["model_path"] = get_recent_model( models_dir, model_suffixes=suffixes )
+    if len( cfg["model_path"] ) == 0:
+        raise RuntimeError("Model path not found, looked in %s for files " \
+                "ending with %s" % (models_dir, repr(suffixes)))
     for k,v in cfg.items():
         if v is None:
             if k not in source_cfg:
