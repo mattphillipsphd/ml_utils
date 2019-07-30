@@ -8,6 +8,7 @@ import sys
 
 import torch
 import torch.nn as nn
+from torch.autograd import Variable
 from torchvision.models.resnet import resnet18, resnet34, resnet50, resnet101, \
         resnet152
 from tensorboardX import SummaryWriter
@@ -18,8 +19,17 @@ HOME = os.path.expanduser("~")
 
 
 # https://sgugger.github.io/how-do-you-find-a-good-learning-rate.html
-def find_lr(model, train_loader, optimizer, criterion, init_value=1e-8,
-        final_value=10.0, beta=0.98):
+# Example initialization and visualization:
+#
+#    net = SimpleNeuralNet(28*28,100,10)
+#    optimizer = optim.SGD(net.parameters(),lr=1e-1)
+#    criterion = F.nll_loss
+#    
+#    logs,losses = find_lr()
+#    plt.plot(logs[10:-5],losses[10:-5])
+def find_lr(model, train_loader, optimizer, criterion,
+        data_splitter=lambda data : data,
+        init_value=1e-8, final_value=10.0, beta=0.98):
     num = len(train_loader)-1
     mult = (final_value / init_value) ** (1/num)
     lr = init_value
@@ -32,13 +42,12 @@ def find_lr(model, train_loader, optimizer, criterion, init_value=1e-8,
     for data in train_loader:
         batch_num += 1
         #As before, get the loss for this mini-batch of inputs/outputs
-        inputs,labels = data
-        inputs, labels = Variable(inputs), Variable(labels)
+        inputs,labels = data_splitter(data)
         optimizer.zero_grad()
         outputs = model(inputs)
         loss = criterion(outputs, labels)
         #Compute the smoothed loss
-        avg_loss = beta * avg_loss + (1-beta) *loss.data[0]
+        avg_loss = beta * avg_loss + (1-beta) *loss.item()
         smoothed_loss = avg_loss / (1 - beta**batch_num)
         #Stop if the loss is exploding
         if batch_num > 1 and smoothed_loss > 4 * best_loss:
@@ -48,7 +57,7 @@ def find_lr(model, train_loader, optimizer, criterion, init_value=1e-8,
             best_loss = smoothed_loss
         #Store the values
         losses.append(smoothed_loss)
-        log_lrs.append(math.log10(lr))
+        log_lrs.append(np.log10(lr))
         #Do the SGD step
         loss.backward()
         optimizer.step()
