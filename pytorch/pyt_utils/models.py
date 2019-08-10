@@ -2,7 +2,6 @@
 Various frequently-used model class definitions.
 """
 
-import logging
 import torch
 import torch.utils.model_zoo as model_zoo
 import torch.nn as nn

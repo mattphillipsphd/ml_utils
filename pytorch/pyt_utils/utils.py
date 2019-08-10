@@ -9,6 +9,8 @@ import sys
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
+from torchvision.models.densenet import densenet121, densenet169, densenet201, \
+        densenet161
 from torchvision.models.resnet import resnet18, resnet34, resnet50, resnet101, \
         resnet152
 from tensorboardX import SummaryWriter
@@ -66,6 +68,28 @@ def find_lr(model, train_loader, optimizer, criterion,
         optimizer.param_groups[0]['lr'] = lr
     return log_lrs, losses
 
+# Inputs
+#   densenet: Name of DenseNet version
+#   num_classes: Number of classes in final fc output layer
+# Output
+#   Returns the model pretrained on ImageNet with optional new final fc layer,
+#   on cpu.
+def get_densenet_model(densenet, num_classes=-1):
+    if densenet == "densenet121":
+        model = densenet121(pretrained=True)
+    elif densenet == "densenet169":
+        model = densenet169(pretrained=True)
+    elif densenet == "densenet201":
+        model = densenet201(pretrained=True)
+    elif densenet == "densenet161":
+        model = densenet161(pretrained=True)
+    else:
+        raise RuntimeError("Unsupported model, %s" % densenet)
+    if num_classes > 0:
+        in_features = model.classifier.in_features
+        classifier = nn.Linear(in_features, num_classes, bias=True)
+        model.classifier = classifier 
+    return model
 
 # Inputs
 #   resnet: Name of ResNet version
