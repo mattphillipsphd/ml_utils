@@ -286,6 +286,17 @@ def make_or_get_session_dir(sessions_supdir, model_name="", dataset_name="",
             raise RuntimeError("Invalid resume path given, %s" % (resume_path))
     return session_dir
 
+# Inputs
+#   x: any number > 0
+# Output
+#   Returns first power of 2 *greater than or equal to* x
+def nearest_pow2(x):
+    x = int(np.ceil(x))
+    p2 = 1
+    while x > p2:
+        p2 *= 2
+    return p2
+
 # Cribbed pretty directly from https://scikit-learn.org/stable/auto_examples/
 # model_selection/plot_confusion_matrix.html#sphx-glr-auto-examples-model-
 # selection-plot-confusion-matrix-py
@@ -369,23 +380,32 @@ def retain_session_dir(session_dir):
 # Inputs:
 #   session_dir: The directory containing the session log.  It will be 
 #       created if it doesn't exist.
-def write_arguments(session_dir):
+#   tb_writer: tensorboard writer
+def write_arguments(session_dir, tb_writer=None):
     s = "python %s" % sys.argv[0]
     for arg in sys.argv[1:]:
         s += " %s" % arg
     with open(pj(session_dir, g_session_log), "a") as fp:
         fp.write("Command line:\n")
         fp.write("%s\n\n" % s)
+        if tb_writer is not None:
+            tb_writer.add_text("Command line:")
+            tb_writer.add_text("%s\n" % s)
 
 # Appends the input parameters to the session log
 # Inputs:
 #   cfg: A dict containing all of the parameters.  Must contain an entry
 #       "session_dir" with a valid path.
-def write_parameters(cfg):
+#   tb_writer: tensorboard writer
+def write_parameters(cfg, tb_writer=None):
     with open(pj(cfg["session_dir"], g_session_log), "a") as fp:
         fp.write("Configuration:\n")
+        if tb_writer is not None:
+            tb_writer.add_text("Configuration")
         for k,v in cfg.items():
             fp.write("%s: %s\n" % (k, repr(v)))
+            if tb_writer is not None:
+                tb_writer.add_text("%s: %s\n" % (k, repr(v)))
         fp.write("\n")
 
 # Inputs:

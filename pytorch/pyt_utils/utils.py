@@ -126,6 +126,19 @@ def get_summary_writer(session_dir):
         os.makedirs(writer_path)
     return SummaryWriter(writer_path)
 
+# Prints out simple basic statistics (min, max, mean, median) for a given
+# variable.
+# Inputs:
+#   x: variable
+#   name (optional): variable name
+# Output:
+#   None
+def print_var_stats(x, name=None):
+    s = "" if name is None else "%s, " % name
+    B = torch if type(x)==torch.Tensor else np
+    print("min: %f, max: %f, mean: %f, median: %f" %
+            (B.min(x), B.max(x), B.mean(x), B.median(x)))
+
 # Inputs
 #   model: The actual model (nn.Module subclass)
 #   model_name: Name of model
