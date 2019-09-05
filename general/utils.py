@@ -106,6 +106,63 @@ def create_session_dir(output_supdir, dir_stub=g_session_dir_stub):
     pathlib.Path( pj(stub % (ct), g_delete_me_txt) ).touch()
     return stub % (ct)
 
+# Intended for csv files produced by calls to write_training_results.  This 
+# creates a file *_reduced.csv with all columns in which there is no 
+# variability, removed.  It overwrites any preexisting file of this name.
+# Inputs:
+#   csv_path: Path to csv file
+#   drop_rows (optional): If integer, drop first n rows, default=0; if list of
+#       ints, drop these rows.  The first non-header row is row 1.
+#   save (optional): List of column names to save regardless of variability
+#   remove (optional): List of column names to remove, regardless of variability
+# Output:
+#   None
+def csv_reducer(csv_path, drop_rows=0, save=[], remove=[]):
+    csv_path = os.path.abspath(csv_path)
+    reader = csv.reader( open(csv_path) )
+    header = next(reader)
+    rows = []
+    if type(drop_rows) == int:
+        drop_rows = list(range(drop_rows))
+    for i,row in enumerate(reader):
+        if i not in drop_rows:
+            rows.append(row)
+    num_rows = len(rows)
+    num_cols = len(header)
+    cols = []
+    for j in range(num_cols):
+        cols.append([])
+    for i in range(num_rows):
+        for j in range(num_cols):
+            cols[j].append( rows[i][j] )
+    reduced_header = []
+    reduced_cols = []
+    for h,col in zip(header,cols):
+        pruned_col = [c for c in col if (c is not None and len(c) > 0)]
+        if h in save or (h not in remove and len( np.unique(pruned_col) ) > 1):
+            reduced_header.append(h)
+            reduced_cols.append(col)
+    reduced_rows = []
+    for i in range(num_rows):
+        row = []
+        for col in reduced_cols:
+            row.append( col[i] )
+        reduced_rows.append(row)
+
+    file_stub = os.path.splitext( os.path.basename(csv_path) )[0]
+    file_dir = os.path.dirname(csv_path)
+    reduced_csv = pj(file_dir, file_stub+"_reduced.csv")
+    writer = csv.writer( open(reduced_csv, "w") )
+    writer.writerow(reduced_header)
+    for row in reduced_rows:
+        writer.writerow(row)
+    
+# Return the path to the directory of the project containing the given file
+# Inputs:
+#   project_name: Name of project, e.g. "retina"
+#   file_path: path to file
+# Output:
+#   Full path to the project directory containing the file
 def get_project_dir(project_name, file_path):
     old_fp = os.path.abspath(file_path)
     while os.path.basename(os.path.abspath(file_path)) != project_name:
@@ -380,7 +437,7 @@ def retain_session_dir(session_dir):
 # Inputs:
 #   session_dir: The directory containing the session log.  It will be 
 #       created if it doesn't exist.
-#   tb_writer: tensorboard writer
+#   tb_writer (optional): tensorboard writer
 def write_arguments(session_dir, tb_writer=None):
     s = "python %s" % sys.argv[0]
     for arg in sys.argv[1:]:
@@ -389,23 +446,23 @@ def write_arguments(session_dir, tb_writer=None):
         fp.write("Command line:\n")
         fp.write("%s\n\n" % s)
         if tb_writer is not None:
-            tb_writer.add_text("Command line:")
-            tb_writer.add_text("%s\n" % s)
+            tb_writer.add_text("Text", "Command line:", 0)
+            tb_writer.add_text("Text", "%s\n" % s, 0)
 
 # Appends the input parameters to the session log
 # Inputs:
 #   cfg: A dict containing all of the parameters.  Must contain an entry
 #       "session_dir" with a valid path.
-#   tb_writer: tensorboard writer
+#   tb_writer (optional): tensorboard writer
 def write_parameters(cfg, tb_writer=None):
     with open(pj(cfg["session_dir"], g_session_log), "a") as fp:
         fp.write("Configuration:\n")
         if tb_writer is not None:
-            tb_writer.add_text("Configuration")
+            tb_writer.add_text("Text", "Configuration", 0)
         for k,v in cfg.items():
             fp.write("%s: %s\n" % (k, repr(v)))
             if tb_writer is not None:
-                tb_writer.add_text("%s: %s\n" % (k, repr(v)))
+                tb_writer.add_text("Text", "%s: %s\n" % (k, repr(v)), 0)
         fp.write("\n")
 
 # Inputs:
