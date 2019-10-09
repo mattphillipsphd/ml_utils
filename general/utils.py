@@ -5,6 +5,7 @@ Platform independent utilities
 import csv
 import fnmatch
 import itertools
+import json
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -426,6 +427,21 @@ def read_session_config(session_log):
             line = next(fp)
     return cfg
 
+# Walks through all the subdirectories of the supplied path recursively, 
+# deleting all files with a given extension and/or in a specific subfolder.
+# Inputs:
+#   root_dir: Root directory
+#   subdir (optional): If supplied, file must be within a subfolder of this name
+#   ext (optional): If supplied, only files with this extension will be deleted
+# Output:
+#   None
+def recursive_file_delete(root_dir, subdir=None, ext=None):
+    for root,dirs,files in os.walk(root_dir):
+        if subdir is None or subdir in root.split(os.sep):
+            del_files = files if ext is None \
+                    else [f for f in files if f.endswith(ext)]
+            _ = [os.remove(pj(root,f)) for f in del_files]
+
 # This deletes the 'delete_me.txt' file which would otherwise signify that
 # this directory should be overwritten on the next training run.  Paired with
 # create_session_dir
@@ -449,6 +465,49 @@ def write_arguments(session_dir, tb_writer=None):
             tb_writer.add_text("Text", "Command line:", 0)
             tb_writer.add_text("Text", "%s\n" % s, 0)
 
+# Writes the parameters and model to a json file
+# Inputs:
+#   session_dir: The directory containing the session log.  It will be 
+#       created if it doesn't exist.
+#   keys (optional): List of keys to write out, others will be ignored
+#   model_path (optional): Path to model file
+#   output_path optional): path where the json file will be written
+def write_config_json(logfile, keys=None, model_path=None,
+        output_path=None):
+    args_dict = read_session_config(logfile)
+    for k in args_dict.keys():
+        if args_dict[k] == "True":
+            v = True
+        elif args_dict[k] == "False":
+            v = False
+        else:
+            try:
+                v = int( args_dict[k] )
+            except ValueError:
+                try:
+                    v = float( args_dict[k] )
+                except ValueError:
+                    v = args_dict[k]
+        args_dict[k] = v
+
+    if keys is not None:
+        d = OrderedDict()
+        for k in keys:
+            d[k] = args_dict[k]
+        args_dict = d
+
+    if model_path is not None:
+        if not pe(model_path):
+            raise RuntimeError("Supplied model path %s doesn't exist" \
+                    % model_path)
+        args_dict["model_path"] = model_path
+    if output_path is None:
+        logfile_dir = os.path.dirname( os.path.abspath(logfile) )
+        output_path = pj(logfile_dir, "config.json")
+    json.dump(args_dict, open(output_path, "w"), indent=4)
+    print("Wrote config json file to %s" % output_path)
+    return args_dict
+
 # Appends the input parameters to the session log
 # Inputs:
 #   cfg: A dict containing all of the parameters.  Must contain an entry
@@ -459,11 +518,12 @@ def write_parameters(cfg, tb_writer=None):
         fp.write("Configuration:\n")
         if tb_writer is not None:
             tb_writer.add_text("Text", "Configuration", 0)
+        s = ""
         for k,v in cfg.items():
-            fp.write("%s: %s\n" % (k, repr(v)))
-            if tb_writer is not None:
-                tb_writer.add_text("Text", "%s: %s\n" % (k, repr(v)), 0)
-        fp.write("\n")
+            s += "%s: %s\n" % (k, repr(v))
+        fp.write(s + "\n")
+        if tb_writer is not None:
+            tb_writer.add_text("Text", s, 0)
 
 # Inputs:
 #   results_dict: A dictionary of core training metrics, see code for required
