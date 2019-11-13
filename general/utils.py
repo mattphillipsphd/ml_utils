@@ -193,6 +193,8 @@ def get_recent_model(models_dir, model_suffixes=[".pkl", ".pt", ".pth"]):
         if int(m_[-4:]) > best_num:
             best_num = int(m_[-4:])
             best_path = pj(models_dir, m)
+    if len(best_path) == 0:
+        raise RuntimeError("No models found in %s" % models_dir)
     return best_path
 
 # Inputs
@@ -362,7 +364,8 @@ def plot_confusion_matrix(cm, save_path, classes,
                           normalize=False,
                           title='Confusion matrix',
                           cmap=plt.cm.Blues,
-                          write_to_console=False):
+                          write_to_console=False,
+                          show_plot=False):
     """
     This function prints and plots the confusion matrix.
     Normalization can be applied by setting `normalize=True`.
@@ -395,7 +398,10 @@ def plot_confusion_matrix(cm, save_path, classes,
     plt.xlabel('Predicted label')
     plt.tight_layout()
     plt.savefig(save_path)
-    plt.close()
+    if show_plot:
+        plt.show()
+    else:
+        plt.close()
 
 # Reads a session.log file and copies the configuration (as written by 
 # write_parameters) into a dict
@@ -498,7 +504,7 @@ def write_config_json(logfile, keys=None, model_path=None,
 
     if model_path is not None:
         if not pe(model_path):
-            raise RuntimeError("Supplied model path %s doesn't exist" \
+            print("Warning, supplied model path %s doesn't exist" \
                     % model_path)
         args_dict["model_path"] = model_path
     if output_path is None:
