@@ -31,14 +31,14 @@ g_session_log = "session.log"
 # ml_utils repo into a session_dir subdirectory
 # Inputs:
 #   project_dir: The directory containing the python code repo
-#   session_dir: The training session directory
-def copy_code(project_dir, session_dir):
+#   output_dir: The output directory
+def copy_code(project_dir, output_dir):
     project_dir = os.path.abspath(project_dir)
     project_name = os.path.basename(project_dir)
     path_to_ml_utils = os.path.dirname(os.path.dirname(os.path.abspath(\
             __file__)))
     mlu_name = os.path.basename(path_to_ml_utils)
-    repos_dir = pj(session_dir, "repos")
+    repos_dir = pj(output_dir, "repos")
     if pe(repos_dir):
         shutil.rmtree(repos_dir)
     pdir = pj(repos_dir, project_name)
@@ -518,9 +518,14 @@ def write_config_json(logfile, keys=None, model_path=None,
 # Inputs:
 #   cfg: A dict containing all of the parameters.  Must contain an entry
 #       "session_dir" with a valid path.
+#   output_dir: Output directory, default is cfg["session_dir"]
+#   output_file: Output file name, default is g_session_log
 #   tb_writer (optional): tensorboard writer
-def write_parameters(cfg, tb_writer=None):
-    with open(pj(cfg["session_dir"], g_session_log), "a") as fp:
+def write_parameters(cfg, output_dir=None, output_file=g_session_log,
+        tb_writer=None):
+    if output_dir is None:
+        output_dir = cfg["session_dir"]
+    with open(pj(output_dir, output_file), "a") as fp:
         fp.write("Configuration:\n")
         if tb_writer is not None:
             tb_writer.add_text("Text", "Configuration", 0)
