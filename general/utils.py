@@ -43,8 +43,7 @@ def copy_code(project_dir, output_dir):
         shutil.rmtree(repos_dir)
     pdir = pj(repos_dir, project_name)
     mludir = pj(repos_dir, mlu_name)
-    shutil.copytree(project_dir, pdir, ignore=include_patterns("*.py",
-        "*.txt"))
+    shutil.copytree(project_dir, pdir, ignore=include_patterns("*.py", "*.txt"))
     shutil.copytree(path_to_ml_utils, mludir,
         ignore=include_patterns("*.py", "*.txt"))
 

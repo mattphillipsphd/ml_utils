@@ -26,6 +26,9 @@ def main(cfg):
     tboard_supdir = os.path.abspath( cfg["tboard_supdir"] )
     tboard_dir = pj(tboard_supdir, os.path.basename(input_dir))
     if pe(tboard_dir):
+        if not cfg["force_overwrite"]:
+            raise RuntimeError("Output directory %s already exists, use -f to "\
+                    "overwrite" % tboard_dir)
         shutil.rmtree(tboard_dir)
     os.makedirs(tboard_dir)
     print("Created tensorboard logdir %s" % tboard_dir)
