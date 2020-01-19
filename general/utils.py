@@ -441,11 +441,14 @@ def read_session_config(session_log):
 # Output:
 #   None
 def recursive_file_delete(root_dir, subdir=None, ext=None):
+    ct = 0
     for root,dirs,files in os.walk(root_dir):
         if subdir is None or subdir in root.split(os.sep):
             del_files = files if ext is None \
                     else [f for f in files if f.endswith(ext)]
             _ = [os.remove(pj(root,f)) for f in del_files]
+            ct += len(del_files)
+    print("%d files removed from directory %s" % (ct, root_dir))
 
 # This deletes the 'delete_me.txt' file which would otherwise signify that
 # this directory should be overwritten on the next training run.  Paired with
@@ -605,3 +608,14 @@ def write_training_results(results_dict, cfg, project_dir, trainer_name):
 
     print("Wrote training results to %s" % path)
 
+def xpt_to_csv(xpt_file, output_path=None):
+    import xport
+    xpt_file = os.path.abspath(xpt_file)
+    if output_path is None:
+        output_path = os.path.splitext(xpt_file)[0] + ".csv"
+    writer = csv.writer( open(output_path, "w") )
+    with open(xpt_file, "rb") as fpr:
+        reader = xport.Reader(fpr)
+        writer.writerow( list(reader.fields) )
+        for line in reader:
+            writer.writerow(line) 

@@ -49,6 +49,9 @@ if __name__ == "__main__":
     parser.add_argument("-e", "--image-ext", type=str, default="")
     parser.add_argument("-o", "--tboard-supdir", type=str, 
             default=pj(HOME, "tensorboard"))
+    parser.add_argument("-d", "--subdir-depth", type=int, default=1,
+            help="Number of subdirectories deep to copy from input directory " \
+                    "path to output directory path")
     parser.add_argument("-f", "--force-overwrite", action="store_true",
             help="If set, preexisting output directory will be deleted")
     cfg = vars( parser.parse_args() )

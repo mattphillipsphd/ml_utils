@@ -117,11 +117,12 @@ def get_resnet_model(resnet, num_classes=-1):
     return model
 
 # Inputs
-#   session_dir: Session directory
+#   tboard_supdir: Parent directory of tensorboard directory, usually session
+#       directory (session_dir)
 # Output
 #   Returns tensorboardX SummaryWriter object
-def get_summary_writer(session_dir):
-    writer_path = pj( session_dir, "tensorboard" )
+def get_summary_writer(tboard_supdir):
+    writer_path = pj( tboard_supdir, "tensorboard" )
     if not pe(writer_path):
         os.makedirs(writer_path)
     return SummaryWriter(writer_path)
