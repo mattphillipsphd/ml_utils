@@ -21,10 +21,19 @@ pj = os.path.join
 HOME = os.path.expanduser("~")
 
 
-def main(cfg):
+def get_tboard_dir(cfg):
     input_dir = os.path.abspath( cfg["input_dir"] )
     tboard_supdir = os.path.abspath( cfg["tboard_supdir"] )
-    tboard_dir = pj(tboard_supdir, os.path.basename(input_dir))
+    subdirs = []
+    for i in range( cfg["subdir_depth"] ):
+        subdirs.append( os.path.basename(input_dir) )
+        input_dir = os.path.dirname(input_dir)
+    tboard_dir = pj(tboard_supdir, *subdirs[::-1])
+    return tboard_dir
+
+def main(cfg):
+    input_dir = os.path.abspath( cfg["input_dir"] )
+    tboard_dir = get_tboard_dir(cfg)
     if pe(tboard_dir):
         if not cfg["force_overwrite"]:
             raise RuntimeError("Output directory %s already exists, use -f to "\
