@@ -1,8 +1,3 @@
-"""
-Platform independent utilities
-"""
-
-import csv
 import fnmatch
 import itertools
 import json
@@ -107,6 +102,27 @@ def create_session_dir(output_supdir, dir_stub=g_session_dir_stub):
     pathlib.Path( pj(stub % (ct), g_delete_me_txt) ).touch()
     return stub % (ct)
 
+# Inputs
+#   x: A PIL image
+#   aspect_ratio: aspect ratio of cropped region, width/height
+# Output
+#   Returns the largest rectangle possible with the specified aspect ratio,
+#   cropped from the image and retaining the original center.
+def crop_to_ar(x, aspect_ratio):
+    o_wd,o_ht = x.size
+    o_ar = o_wd/o_ht
+    if aspect_ratio > o_ar:
+        wd = o_wd
+        ht = int(o_wd / aspect_ratio)
+        x0 = 0
+        y0 = int((o_ht - wd/aspect_ratio) // 2)
+    else:
+        wd = int(aspect_ratio * o_ht)
+        ht = o_ht
+        x0 = int((o_wd - aspect_ratio*ht) // 2)
+        y0 = 0
+    return x.crop((x0, y0, x0+wd, y0+ht))
+
 # Intended for csv files produced by calls to write_training_results.  This 
 # creates a file *_reduced.csv with all columns in which there is no 
 # variability, removed.  It overwrites any preexisting file of this name.
@@ -158,45 +174,6 @@ def csv_reducer(csv_path, drop_rows=0, save=[], remove=[]):
     for row in reduced_rows:
         writer.writerow(row)
     
-# Return the path to the directory of the project containing the given file
-# Inputs:
-#   project_name: Name of project, e.g. "retina"
-#   file_path: path to file
-# Output:
-#   Full path to the project directory containing the file
-def get_project_dir(project_name, file_path):
-    old_fp = os.path.abspath(file_path)
-    while os.path.basename(os.path.abspath(file_path)) != project_name:
-        file_path = os.path.dirname(file_path)
-        if file_path == old_fp:
-            raise RuntimeError("No project directory %s found in path %s" \
-                    % (project_name, file_path))
-        old_fp = file_path
-    return os.path.abspath(file_path)
-
-# Inputs
-#   models_dir: Directory containing pytorch models saved in the format used by
-#       save_model_pop_old
-# Output
-#   Full path to most recent model
-def get_recent_model(models_dir, model_suffixes=[".pkl", ".pt", ".pth"]):
-    models = []
-    for f in os.listdir(models_dir):
-        for ms in model_suffixes:
-            if f.endswith(ms):
-                models.append(f)
-                break
-    best_num = -1
-    best_path = ""
-    for m in models:
-        m_ = os.path.splitext(m)[0]
-        if int(m_[-4:]) > best_num:
-            best_num = int(m_[-4:])
-            best_path = pj(models_dir, m)
-    if len(best_path) == 0:
-        raise RuntimeError("No models found in %s" % models_dir)
-    return best_path
-
 # Inputs
 #   x: A PIL image
 #   expansion: If this is an int, the pixel size of the new image.  If it is a
@@ -251,6 +228,45 @@ def expand_square_image(x, expansion, fill_color=(0,0,0)):
     else:
         raise RuntimeError("Unexpected PIL image mode, %s" % x.mode)
     return img
+
+# Return the path to the directory of the project containing the given file
+# Inputs:
+#   project_name: Name of project, e.g. "retina"
+#   file_path: path to file
+# Output:
+#   Full path to the project directory containing the file
+def get_project_dir(project_name, file_path):
+    old_fp = os.path.abspath(file_path)
+    while os.path.basename(os.path.abspath(file_path)) != project_name:
+        file_path = os.path.dirname(file_path)
+        if file_path == old_fp:
+            raise RuntimeError("No project directory %s found in path %s" \
+                    % (project_name, file_path))
+        old_fp = file_path
+    return os.path.abspath(file_path)
+
+# Inputs
+#   models_dir: Directory containing pytorch models saved in the format used by
+#       save_model_pop_old
+# Output
+#   Full path to most recent model
+def get_recent_model(models_dir, model_suffixes=[".pkl", ".pt", ".pth"]):
+    models = []
+    for f in os.listdir(models_dir):
+        for ms in model_suffixes:
+            if f.endswith(ms):
+                models.append(f)
+                break
+    best_num = -1
+    best_path = ""
+    for m in models:
+        m_ = os.path.splitext(m)[0]
+        if int(m_[-4:]) > best_num:
+            best_num = int(m_[-4:])
+            best_path = pj(models_dir, m)
+    if len(best_path) == 0:
+        raise RuntimeError("No models found in %s" % models_dir)
+    return best_path
 
 
 # Inputs
