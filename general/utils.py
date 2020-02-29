@@ -445,6 +445,8 @@ def read_session_config(session_log):
                 val = val[1:]
             if val[-1] == "'":
                 val = val[:-1]
+            if len(val)>1 and val[-1] == "," and val[-2] == "'":
+                val = val[:-2] + ","
             cfg[key] = val
             line = next(fp)
     return cfg
@@ -550,7 +552,13 @@ def write_parameters(cfg, output_dir=None, output_file=g_session_log,
             tb_writer.add_text("Text", "Configuration", 0)
         s = ""
         for k,v in cfg.items():
-            s += "%s: %s\n" % (k, repr(v))
+            if type(v)==list or type(v)==tuple:
+                s += "%s: " % k
+                for elt in v:
+                    s += "%s," % repr(elt)
+                s += "\n"
+            else:
+                s += "%s: %s\n" % (k, repr(v))
         fp.write(s + "\n")
         if tb_writer is not None:
             tb_writer.add_text("Text", s, 0)
