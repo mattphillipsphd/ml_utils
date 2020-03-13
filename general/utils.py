@@ -442,13 +442,16 @@ def read_session_config(session_log):
             pos = line.index(":")
             key = line[:pos]
             val = line[pos+1:].strip()
-            if val[0] == "'":
-                val = val[1:]
-            if val[-1] == "'":
-                val = val[:-1]
-            if len(val)>1 and val[-1] == "," and val[-2] == "'":
-                val = val[:-2] + ","
-            cfg[key] = val
+            if len(val) == 0:
+                cfg[key] = []
+            else:
+                if val[0] == "'":
+                    val = val[1:]
+                if val[-1] == "'":
+                    val = val[:-1]
+                if len(val)>1 and val[-1] == "," and val[-2] == "'":
+                    val = val[:-2] + ","
+                cfg[key] = val
             line = next(fp)
     return cfg
 
