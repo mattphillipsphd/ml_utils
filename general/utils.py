@@ -480,6 +480,41 @@ def retain_session_dir(session_dir):
     if pe(pj(session_dir, g_delete_me_txt)):
         os.remove( pj(session_dir, g_delete_me_txt) )
 
+# Removes border/frame of specified color from PIL image
+# Inputs:
+#   x: PIL image, mode RGB or L
+#   border (optional): The color value treated as border
+# Output:
+#   PIL image, with border removed
+def remove_image_border(x, border=0):
+    wd,ht = x.size
+    num_ch = 3 if x.mode=="RGB" else 1
+    img = np.array( x.getdata() )
+    img = np.reshape(img, (ht, wd, num_ch))
+    left,top = 0, 0
+    right,bottom = wd, ht
+    for j in range(wd):
+        if (img[:,j,:] != border).any():
+            left = j
+            break
+    for j in range(wd-1,-1,-1): 
+        if (img[:,j,:] != border).any():
+            right = j+1
+            break
+    if left >= right:
+        return Image.new()
+    for i in range(ht):
+        if (img[i,:,:] != border).any():
+            top = i
+            break
+    for i in range(ht-1,-1,-1):
+        if (img[i,:,:] != border).any():
+            bottom = i+1
+            break
+    if top >= bottom:
+        return Image.new()
+    return x.crop( (left,top,right,bottom) )
+
 # Appends the command-line arguments to the session log
 # Inputs:
 #   session_dir: The directory containing the session log.  It will be 
