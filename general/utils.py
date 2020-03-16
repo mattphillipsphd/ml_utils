@@ -383,7 +383,7 @@ def write_parameters(cfg):
         fp.write("Configuration:\n")
         for k,v in cfg.items():
             fp.write("%s: %s\n" % (k, repr(v)))
-    fp.write("\n")
+        fp.write("\n")
 
 # Inputs:
 #   results_dict: A dictionary of core training metrics, see code for required

@@ -79,4 +79,25 @@ def save_model_pop_old(model, model_name, epoch, models_dir, max_model_ct=5):
     torch.save(model.state_dict(), path)
     return path
 
+# Inputs
+#   models_dir: Directory containing pytorch models saved in the format used by
+#       save_model_pop_old
+# Output
+#   Full path to most recent model
+def get_recent_model(models_dir, model_suffixes=[".pkl", ".pt", ".pth"]):
+    models = []
+    for f in os.listdir(models_dir):
+        for ms in model_suffixes:
+            if f.endswith(ms):
+                models.append(f)
+                break
+    best_num = -1
+    best_path = ""
+    for m in models:
+        m_ = os.path.splitext(m)[0]
+        if int(m_[-4:]) > best_num:
+            best_num = int(m_[-4:])
+            best_path = pj(models_dir, m)
+    return best_path
+
 
