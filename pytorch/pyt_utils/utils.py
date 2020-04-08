@@ -9,9 +9,9 @@ import sys
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
-from torchvision.models.densenet import densenet121, densenet169, densenet201, \
+from torchvision.models.densenet import densenet121, densenet169, densenet201,\
         densenet161
-from torchvision.models.resnet import resnet18, resnet34, resnet50, resnet101, \
+from torchvision.models.resnet import resnet18, resnet34, resnet50, resnet101,\
         resnet152
 from tensorboardX import SummaryWriter
 
