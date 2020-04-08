@@ -40,7 +40,7 @@ def copy_code(project_dir, output_dir):
         shutil.rmtree(repos_dir)
     pdir = pj(repos_dir, project_name)
     mludir = pj(repos_dir, mlu_name)
-    shutil.copytree(project_dir, pdir, ignore=include_patterns("*.py", "*.txt"))
+    shutil.copytree(project_dir, pdir, ignore=include_patterns("*.py","*.txt"))
     shutil.copytree(path_to_ml_utils, mludir,
         ignore=include_patterns("*.py", "*.txt"))
 
@@ -132,7 +132,8 @@ def crop_to_ar(x, aspect_ratio):
 #   drop_rows (optional): If integer, drop first n rows, default=0; if list of
 #       ints, drop these rows.  The first non-header row is row 1.
 #   save (optional): List of column names to save regardless of variability
-#   remove (optional): List of column names to remove, regardless of variability
+#   remove (optional): List of column names to remove, regardless of
+#   variability
 # Output:
 #   None
 def csv_reducer(csv_path, drop_rows=0, save=[], remove=[]):
@@ -189,7 +190,7 @@ def expand_square_image(x, expansion, fill_color=(0,0,0)):
         return x
     if type(expansion)==int:
         if expansion<max_dim:
-            raise RuntimeError("The new dimension %d must be larger than the " \
+            raise RuntimeError("The new dimension %d must be larger than the "\
                     "max input image dimension, %d" % (expansion, max_dim))
         new_sz = expansion
     elif type(expansion)==float:
@@ -201,8 +202,8 @@ def expand_square_image(x, expansion, fill_color=(0,0,0)):
         raise RuntimeError("Unrecognized type for expansion, %s" \
                 % type(expansion))
     if x.mode=="L":
-        # TODO np.array is very slow here, doesn't seem to be any way to do this
-        # without it though.
+        # TODO np.array is very slow here, doesn't seem to be any way to do
+        # this without it though.
         orig = np.array( x.getdata() ).reshape(ht,wd)
         x0 = (new_sz - wd) // 2
         y0 = (new_sz - ht) // 2
@@ -280,8 +281,8 @@ def grow_image_to_square(x, fill_color=(0,0,0)):
     wd,ht = x.size
     new_sz = np.max([wd, ht])
     if x.mode=="L":
-        # TODO np.array is very slow here, doesn't seem to be any way to do this
-        # without it though.
+        # TODO np.array is very slow here, doesn't seem to be any way to do
+        # this without it though.
         orig = np.array( x.getdata() ).reshape(ht,wd)
         if wd<ht:
             x0 = (new_sz - wd) // 2
@@ -311,7 +312,8 @@ def grow_image_to_square(x, fill_color=(0,0,0)):
         raise RuntimeError("Unexpected PIL image mode, %s" % x.mode)
     return img
 
-# Copied directly from https://stackoverflow.com/questions/35155382/copying      # -specific-files-to-a-new-folder-while-maintaining-the-original-subdirect
+# Copied directly from https://stackoverflow.com/questions/35155382/copying
+# -specific-files-to-a-new-folder-while-maintaining-the-original-subdirect
 def include_patterns(*patterns):
     """ Function that can be used as shutil.copytree() ignore parameter that
     determines which files *not* to ignore, the inverse of "normal" usage.
@@ -459,7 +461,8 @@ def read_session_config(session_log):
 # deleting all files with a given extension and/or in a specific subfolder.
 # Inputs:
 #   root_dir: Root directory
-#   subdir (optional): If supplied, file must be within a subfolder of this name
+#   subdir (optional): If supplied, file must be within a subfolder of this
+#       name
 #   ext (optional): If supplied, only files with this extension will be deleted
 # Output:
 #   None
