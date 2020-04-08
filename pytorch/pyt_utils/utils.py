@@ -91,6 +91,27 @@ def get_densenet_model(densenet, num_classes=-1):
         model.classifier = classifier 
     return model
 
+# Get optimizer used in model training
+# Input
+#   cfg (dict): Configuration parameters
+#   lr (float): Learning rate
+#   model (nn.Module): PyTorch module
+#   params (optional, None): dict of specific model parameters to optimize
+# Output
+#   optimizer: torch.optim object
+def get_optimizer(cfg, lr, model, params=None):
+    if params is None:
+        params = [p for p in model.parameters() if p.requires_grad]
+    if cfg["optimizer"] == "Adam":
+        optimizer = torch.optim.Adam( params, betas=(cfg["b1"], cfg["b2"]),
+                eps=cfg["eps"], weight_decay=cfg["weight_decay"], lr=lr)
+    elif cfg["optimizer"] == "SGD":
+        optimizer = torch.optim.SGD(params, lr, momentum=cfg["momentum"],
+                weight_decay=cfg["weight_decay"])
+    else:
+        raise NotImplementedError( cfg["optimizer"] )
+    return optimizer
+
 # Inputs
 #   resnet: Name of ResNet version
 #   num_classes: Number of classes in final fc output layer
