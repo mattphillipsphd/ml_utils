@@ -158,8 +158,9 @@ def get_summary_writer(tboard_supdir):
 def print_var_stats(x, name=None):
     s = "" if name is None else "%s, " % name
     B = torch if type(x)==torch.Tensor else np
-    print("%smin: %f, max: %f, mean: %f, median: %f" %
-            (s, B.min(x), B.max(x), B.mean(x), B.median(x)))
+    print("%sshape: %s, min: %f, max: %f, mean: %f, median: %f" %
+            (s, repr(tuple(x.shape)), B.min(x), B.max(x), B.mean(x),
+                B.median(x)))
 
 # Inputs
 #   model: The actual model (nn.Module subclass)
