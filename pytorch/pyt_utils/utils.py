@@ -20,6 +20,19 @@ pj = os.path.join
 HOME = os.path.expanduser("~")
 
 
+# Summary writer for tensorboard
+g_tboard_writer = None
+
+# Inputs
+#   tboard_supdir: Parent directory of tensorboard directory, usually session
+#       directory (session_dir)
+# Output
+#   Summary writer object
+def create_and_set_summary_writer(tboard_supdir):
+    global g_tboard_writer
+    g_tboard_writer = get_summary_writer(tboard_supdir)
+    return g_tboard_writer
+
 # https://sgugger.github.io/how-do-you-find-a-good-learning-rate.html
 # Example initialization and visualization:
 #
@@ -147,6 +160,12 @@ def get_summary_writer(tboard_supdir):
     if not pe(writer_path):
         os.makedirs(writer_path)
     return SummaryWriter(writer_path)
+
+# Inputs
+# Output
+#   Returns global tensorboardX SummaryWriter object
+def get_tboard_writer():
+    return g_tboard_writer
 
 # Prints out simple basic statistics (min, max, mean, median) for a given
 # variable.

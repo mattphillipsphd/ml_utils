@@ -36,8 +36,8 @@ def main(cfg):
     tboard_dir = get_tboard_dir(cfg)
     if pe(tboard_dir):
         if not cfg["force_overwrite"]:
-            raise RuntimeError("Output directory %s already exists, use -f to "\
-                    "overwrite" % tboard_dir)
+            raise RuntimeError("Output directory %s already exists, use -f to"\
+                    " overwrite" % tboard_dir)
         shutil.rmtree(tboard_dir)
     os.makedirs(tboard_dir)
     print("Created tensorboard logdir %s" % tboard_dir)
@@ -59,7 +59,7 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--tboard-supdir", type=str, 
             default=pj(HOME, "tensorboard"))
     parser.add_argument("-d", "--subdir-depth", type=int, default=1,
-            help="Number of subdirectories deep to copy from input directory " \
+            help="Number of subdirectories deep to copy from input directory "\
                     "path to output directory path")
     parser.add_argument("-f", "--force-overwrite", action="store_true",
             help="If set, preexisting output directory will be deleted")
