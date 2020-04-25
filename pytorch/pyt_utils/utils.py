@@ -207,4 +207,3 @@ def save_model_pop_old(model, model_name, epoch, models_dir, max_model_ct=5):
     torch.save(model.state_dict(), path)
     return path
 
-
