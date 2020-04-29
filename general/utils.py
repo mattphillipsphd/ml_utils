@@ -132,8 +132,8 @@ def crop_to_ar(x, aspect_ratio):
 #   drop_rows (optional): If integer, drop first n rows, default=0; if list of
 #       ints, drop these rows.  The first non-header row is row 1.
 #   save (optional): List of column names to save regardless of variability
-#   remove (optional): List of column names to remove, regardless of
-#   variability
+#   remove (optional): List of column names to remove, regardless of 
+#       variability
 # Output:
 #   None
 def csv_reducer(csv_path, drop_rows=0, save=[], remove=[]):
@@ -313,7 +313,7 @@ def grow_image_to_square(x, fill_color=(0,0,0)):
     return img
 
 # Copied directly from https://stackoverflow.com/questions/35155382/copying
-# -specific-files-to-a-new-folder-while-maintaining-the-original-subdirect
+#-specific-files-to-a-new-folder-while-maintaining-the-original-subdirect
 def include_patterns(*patterns):
     """ Function that can be used as shutil.copytree() ignore parameter that
     determines which files *not* to ignore, the inverse of "normal" usage.
@@ -357,7 +357,7 @@ def make_or_get_session_dir(sessions_supdir, model_name="", dataset_name="",
     supdir = pj(sessions_supdir, model_name, dataset_name)
     if not pe(supdir):
         os.makedirs(supdir)
-    if len(resume_path)==0:
+    if resume_path is None or len(resume_path)==0:
         session_dir = create_session_dir(supdir)
     else:
         session_dir = os.path.dirname( os.path.dirname(resume_path) )
