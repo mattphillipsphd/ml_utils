@@ -108,13 +108,15 @@ def get_densenet_model(densenet, num_classes=-1):
 # Input
 #   cfg (dict): Configuration parameters
 #   lr (float): Learning rate
-#   model (nn.Module): PyTorch module
-#   params (optional, None): dict of specific model parameters to optimize
+#   model_or_params: PyTorch module (nn.Module) or list/generator of parmaters
 # Output
 #   optimizer: torch.optim object
-def get_optimizer(cfg, lr, model, params=None):
-    if params is None:
-        params = [p for p in model.parameters() if p.requires_grad]
+def get_optimizer(cfg, lr, model_or_params):
+    if hasattr(model_or_params, "parameters"):
+        params = [p for p in model_or_params.parameters() \
+                if p.requires_grad]
+    else:
+        params = model_or_params
     if cfg["optimizer"] == "Adam":
         optimizer = torch.optim.Adam( params, betas=(cfg["b1"], cfg["b2"]),
                 eps=cfg["eps"], weight_decay=cfg["weight_decay"], lr=lr)
