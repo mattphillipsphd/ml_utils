@@ -9,9 +9,9 @@ import sys
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
-from torchvision.models.densenet import densenet121, densenet169, densenet201, \
+from torchvision.models.densenet import densenet121, densenet169, densenet201,\
         densenet161
-from torchvision.models.resnet import resnet18, resnet34, resnet50, resnet101, \
+from torchvision.models.resnet import resnet18, resnet34, resnet50, resnet101,\
         resnet152
 from tensorboardX import SummaryWriter
 
@@ -179,8 +179,9 @@ def get_tboard_writer():
 def print_var_stats(x, name=None):
     s = "" if name is None else "%s, " % name
     B = torch if type(x)==torch.Tensor else np
-    print("%smin: %f, max: %f, mean: %f, median: %f" %
-            (s, B.min(x), B.max(x), B.mean(x), B.median(x)))
+    print("%sshape: %s, min: %f, max: %f, mean: %f, median: %f" %
+            (s, repr(tuple(x.shape)), B.min(x), B.max(x), B.mean(x),
+                B.median(x)))
 
 # Inputs
 #   model: The actual model (nn.Module subclass)
