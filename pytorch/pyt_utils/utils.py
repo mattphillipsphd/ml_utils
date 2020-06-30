@@ -210,3 +210,64 @@ def save_model_pop_old(model, model_name, epoch, models_dir, max_model_ct=5):
     torch.save(model.state_dict(), path)
     return path
 
+# Inputs
+#   model: PyTorch model, nn.Module subclass
+#   writer: tensorboardX writer object
+#   iter_ct: What model iteration
+#   splitter: What character splits the layer names into components
+# Output:
+#   None
+def write_tboard_layers(model, writer, iter_ct, splitter="."):
+    # Expecting names like _encoder.3.weight, _decoder.9.bias, etc.
+    grad_metrics = OrderedDict()
+    for name,param in model.named_parameters():
+        if model.get_is_conv_layer(name) and "weight" in name:
+            HT,WD,wd,ht = min(16,param.shape[0]), min(16,param.shape[1]), \
+                    param.shape[2], param.shape[3]
+            img = torch.FloatTensor(1, HT*ht, WD*wd).to( param.device )
+            for i in range(HT):
+                for j in range(WD):
+                    img[0, i*ht:(i+1)*ht, j*wd:(j+1)*wd] = param[i,j]
+            writer.add_image(name, img, iter_ct)
+
+        name_tokens = name.split(splitter)
+        s = ""
+        if name_tokens[0] == "_encoder":
+            cat = "Encoder"
+            name = splitter.join( name_tokens[1:] )
+        elif name_tokens[0] == "_decoder":
+            cat = "Decoder"
+            name = splitter.join( name_tokens[1:] )
+        elif "bneck" in name_tokens:
+            cat = "Bottleneck"
+            name = splitter.join(name_tokens)
+        else:
+            continue
+        s += cat + "/"
+
+        pows10 = [2,4,6]
+        if cat not in grad_metrics:
+            grad_metrics[cat] = OrderedDict()
+            grad_metrics[cat]["SD"] = OrderedDict()
+            for e in pows10:
+                grad_metrics[cat]["Pct%d" % e] = OrderedDict()
+        pgrad = param.grad
+        if "weight" in name_tokens:
+            grad_metrics[cat]["SD"][name] = torch.std(pgrad)
+            for e in pows10:
+                grad_metrics[cat]["Pct%d" % e][name] = 100.0 * torch.mean( \
+                        (torch.abs(pgrad) < pow(10,-e)).float() )
+
+        if "weight" in name_tokens:
+            s += "weight/"
+        elif "bias" in name_tokens:
+            s += "bias/"
+
+        writer.add_histogram(s+name, param, iter_ct)
+        writer.add_histogram("Gradient/"+s+name, param.grad, iter_ct)
+
+    for cat,cat_dict in grad_metrics.items():
+        for met_name,met_dict in cat_dict.items():
+            writer.add_scalars("Gradient/"+cat+"/"+met_name, met_dict,
+                    iter_ct)
+

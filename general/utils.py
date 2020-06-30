@@ -353,15 +353,15 @@ def include_patterns(*patterns):
 #   Returns path to either a newly-created session directory or one to be
 #       resumed, per inputs
 def make_or_get_session_dir(sessions_supdir, model_name="", dataset_name="",
-        resume_path=""):
-    supdir = pj(sessions_supdir, model_name, dataset_name)
+        resume_path="", prefix="session"):
+    supdir = os.path.abspath( pj(sessions_supdir, model_name, dataset_name) )
     if not pe(supdir):
         os.makedirs(supdir)
     if resume_path is None or len(resume_path)==0:
         session_dir = create_session_dir(supdir)
     else:
         session_dir = os.path.dirname( os.path.dirname(resume_path) )
-        if not os.path.basename(session_dir).startswith("session_"):
+        if not os.path.basename(session_dir).startswith(prefix+"_"):
             raise RuntimeError("Invalid resume path given, %s" % (resume_path))
     return session_dir
 
@@ -384,7 +384,8 @@ def plot_confusion_matrix(cm, save_path, classes,
                           title='Confusion matrix',
                           cmap=plt.cm.Blues,
                           write_to_console=False,
-                          show_plot=False):
+                          show_plot=False,
+                          figsize=None):
     """
     This function prints and plots the confusion matrix.
     Normalization can be applied by setting `normalize=True`.
@@ -399,6 +400,8 @@ def plot_confusion_matrix(cm, save_path, classes,
             print('Confusion matrix, without normalization')
         print(cm)
 
+    if figsize is not None:
+        plt.figure(figsize=figsize)
     plt.imshow(cm, interpolation='nearest', cmap=cmap)
     plt.title(title)
     plt.colorbar()
