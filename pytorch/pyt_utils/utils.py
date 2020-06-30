@@ -183,6 +183,28 @@ def print_var_stats(x, name=None):
             (s, repr(tuple(x.shape)), B.min(x), B.max(x), B.mean(x),
                 B.median(x)))
 
+# Load a state dict into a model
+# Inputs
+#   model: PyTorch model
+#   model_path: Path to state dict
+#   cudev: cuda device number or "cpu"
+#   mode (optional): train or test
+# Output
+#   PyTorch model
+def load_state_dict(model, model_path, cudev, mode="test"):
+    sd = torch.load(model_path, map_location=lambda storage,loc : storage)
+    model.load_state_dict(sd)
+    if type(cudev)==int and cudev < 0:
+        model = model.to("cpu")
+    else:
+        model = model.to(cudev)
+    if mode=="test":
+        model.eval()
+        model.train(False)
+    else:
+        model.train(True)
+    return model
+
 # Inputs
 #   model: The actual model (nn.Module subclass)
 #   model_name: Name of model
