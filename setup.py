@@ -14,8 +14,8 @@ PROJECT_DIRS = ["general", "pytorch2caffe"]
 if __name__ == '__main__':
     setup(setup_fpath=__file__,
         name="ml_utils",
-        author="Matt Phillips, Kitware",
-        author_email="matt.phillips@kitware.com",
+        author="Matt Phillips"
+        author_email="mattphillipsphd@gmail.com",
         version=version,
         project_dirs=PROJECT_DIRS
     )
